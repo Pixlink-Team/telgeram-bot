@@ -1,11 +1,11 @@
-import { logger } from './logger';
-import { config } from './config';
-import type { OutgoingMessage } from './types';
+import { logger } from './logger.js';
+import { config } from './config.js';
+import type { OutgoingMessage } from './types.js';
 import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
+import { StringSession } from 'telegram/sessions/index.js';
 import { Api } from 'telegram';
-import { computeCheck } from 'telegram/Password';
-import { NewMessage } from 'telegram/events';
+import { computeCheck } from 'telegram/Password.js';
+import { NewMessage } from 'telegram/events/index.js';
 
 export class TelegramService {
   private client: TelegramClient;

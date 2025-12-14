@@ -1,6 +1,6 @@
-import { startServer } from './server';
-import { connectDb } from './db';
-import { AccountManager } from './accountManager';
+import { startServer } from './server.js';
+import { connectDb } from './db.js';
+import { AccountManager } from './accountManager.js';
 
 async function main() {
   await connectDb();

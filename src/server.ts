@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
-import { config } from './config';
-import { logger } from './logger';
-import { TelegramService } from './telegram';
-import type { SendMessageOptions } from './types';
-import { AccountManager } from './accountManager';
+import { config } from './config.js';
+import { logger } from './logger.js';
+import { TelegramService } from './telegram.js';
+import type { SendMessageOptions } from './types.js';
+import { AccountManager } from './accountManager.js';
 
 type SendCodeBody = { phone?: string };
 type VerifyCodeBody = { phone?: string; code: string; phoneCodeHash: string };

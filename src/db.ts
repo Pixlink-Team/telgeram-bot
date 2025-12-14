@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { logger } from './logger';
-import { config } from './config';
+import { logger } from './logger.js';
+import { config } from './config.js';
 
 export async function connectDb() {
   if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {

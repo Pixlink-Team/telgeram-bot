@@ -1,8 +1,8 @@
-import { AccountModel, AccountDocument } from './models/account';
-import { MessageModel } from './models/message';
-import { TelegramService } from './telegram';
-import type { OutgoingMessage } from './types';
-import { logger } from './logger';
+import { AccountModel, AccountDocument } from './models/account.js';
+import { MessageModel } from './models/message.js';
+import { TelegramService } from './telegram.js';
+import type { OutgoingMessage } from './types.js';
+import { logger } from './logger.js';
 
 export interface AccountInput {
   phone: string;
