@@ -4,13 +4,15 @@ import type { OutgoingMessage } from './types';
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { Api } from 'telegram';
+import { computeCheck } from 'telegram/Password';
+import { NewMessage } from 'telegram/events';
 
 export class TelegramService {
   private client: TelegramClient;
   private session: StringSession;
 
-  constructor() {
-    this.session = new StringSession(process.env.TELEGRAM_SESSION ?? '');
+  constructor(sessionString?: string) {
+    this.session = new StringSession(sessionString ?? process.env.TELEGRAM_SESSION ?? '');
     this.client = new TelegramClient(this.session, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH, {
       connectionRetries: 5,
     });
@@ -47,14 +49,39 @@ export class TelegramService {
   }
 
   async checkPassword(password: string) {
-    const srp = await this.client.invoke(new Api.auth.CheckPassword({
-      password: await this.client.computeCheckPassword(password),
-    }));
+    const pwd = await this.client.invoke(new Api.account.GetPassword());
+    const passwordSrp = await computeCheck(pwd, password);
+
+    await this.client.invoke(new Api.auth.CheckPassword({ password: passwordSrp }));
+
     const sessionStr = this.session.save();
-    return { srp, session: sessionStr };
+    return { session: sessionStr };
   }
 
   async send(message: OutgoingMessage) {
     await this.client.sendMessage(message.chatId, { message: message.text });
+  }
+
+  async startListening(onMessage: (payload: {
+    chatId: string;
+    messageId: number;
+    text?: string;
+    fromId?: string;
+    date: Date;
+    raw: any;
+  }) => Promise<void>) {
+    this.client.addEventHandler(async (event) => {
+      const msg = event.message;
+      if (!msg) return;
+
+      await onMessage({
+        chatId: String(msg.chatId),
+        messageId: msg.id,
+        text: msg.message,
+        fromId: msg.senderId ? String(msg.senderId) : undefined,
+        date: msg.date ? new Date(msg.date * 1000) : new Date(),
+        raw: typeof (msg as any)?.toJSON === 'function' ? (msg as any).toJSON() : msg,
+      });
+    }, new NewMessage({}));
   }
 }

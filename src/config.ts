@@ -3,6 +3,7 @@ dotenv.config();
 
 export const config = {
   PORT: Number(process.env.PORT ?? 8081),
+  MONGODB_URI: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/telegram-bot-api',
   // MTProto (user account)
   TELEGRAM_API_ID: Number(process.env.TELEGRAM_API_ID ?? 0),
   TELEGRAM_API_HASH: process.env.TELEGRAM_API_HASH ?? '',
