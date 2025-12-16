@@ -30,7 +30,7 @@ export class TelegramService {
           proxy = {
             ip: config.TELEGRAM_MTPROTO_HOST,
             port: config.TELEGRAM_MTPROTO_PORT,
-            MTProto: true,
+            MTProxy: true,
             secret: config.TELEGRAM_MTPROTO_SECRET,
           };
           logger.info({ host: config.TELEGRAM_MTPROTO_HOST, port: config.TELEGRAM_MTPROTO_PORT }, 'Using MTProto proxy');
