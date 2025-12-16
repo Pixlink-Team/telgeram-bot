@@ -137,5 +137,15 @@ export class TelegramService {
         raw: typeof (msg as any)?.toJSON === 'function' ? (msg as any).toJSON() : msg,
       });
     }, new NewMessage({}));
+
+    // Ensure we start receiving updates immediately (process any pending updates since last session)
+    try {
+      // GramJS exposes catchUp to pull missed updates after reconnect
+      if (typeof (this.client as any).catchUp === 'function') {
+        await (this.client as any).catchUp();
+      }
+    } catch (err) {
+      logger.warn({ err }, 'Failed to catch up updates; continuing to listen');
+    }
   }
 }
