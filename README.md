@@ -59,10 +59,12 @@ curl -X POST http://localhost:8081/login/verifyCode \
 # if account has 2FA password, verify it
 curl -X POST http://localhost:8081/login/password \
   -H "Content-Type: application/json" \
-  -d '{"password": "YOUR_PASSWORD"}'
+  -d '{"phone": "+989123456789", "password": "YOUR_PASSWORD", "session": "SESSION_FROM_VERIFY"}'
 
 # Save the returned session string (TELEGRAM_SESSION) into your .env to auto-login next time.
 ```
+
+> Tip: If you want to onboard many accounts with different Telegram API credentials, you can pass `apiId` and `apiHash` in the login requests (`/login/sendCode`, `/login/verifyCode`, `/login/password`). Otherwise, the values from `.env` are used.
 
 Send a message (after login):
 ```fish

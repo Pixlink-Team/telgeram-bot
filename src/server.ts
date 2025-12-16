@@ -5,9 +5,9 @@ import { TelegramService } from './telegram.js';
 import type { SendMessageOptions } from './types.js';
 import { AccountManager } from './accountManager.js';
 
-type SendCodeBody = { phone?: string };
-type VerifyCodeBody = { phone?: string; code: string; phoneCodeHash: string; session?: string };
-type PasswordBody = { password: string; session?: string };
+type SendCodeBody = { phone?: string; apiId?: number; apiHash?: string };
+type VerifyCodeBody = { phone?: string; code: string; phoneCodeHash: string; session?: string; apiId?: number; apiHash?: string };
+type PasswordBody = { phone?: string; password: string; session?: string; apiId?: number; apiHash?: string };
 type SendMessageBody = { accountId: string; chatId: number; text: string; options?: SendMessageOptions };
 
 const app = express();
@@ -20,13 +20,25 @@ export function startServer(accountManager: AccountManager) {
   // Login endpoints for user account
   app.post('/login/sendCode', async (req: Request<unknown, unknown, SendCodeBody>, res: Response) => {
     try {
-      logger.info({ apiId: config.TELEGRAM_API_ID, apiHash: config.TELEGRAM_API_HASH }, 'Creating TelegramService for sendCode');
+      const { phone, apiId, apiHash } = req.body ?? {};
+      const resolvedPhone = phone ?? config.TELEGRAM_PHONE;
+      const resolvedApiId = apiId ?? config.TELEGRAM_API_ID;
+      const resolvedApiHash = apiHash ?? config.TELEGRAM_API_HASH;
+
+      if (!resolvedPhone) {
+        return res.status(400).json({ ok: false, error: 'phone is required' });
+      }
+      if (!resolvedApiId || !resolvedApiHash) {
+        return res.status(400).json({ ok: false, error: 'apiId and apiHash are required' });
+      }
+
+      logger.info({ apiId: resolvedApiId, apiHash: resolvedApiHash, phone: resolvedPhone }, 'Creating TelegramService for sendCode');
       const tg = new TelegramService({
-        apiId: config.TELEGRAM_API_ID,
-        apiHash: config.TELEGRAM_API_HASH,
+        apiId: resolvedApiId,
+        apiHash: resolvedApiHash,
       });
       await tg.connect();
-      const r = await tg.sendCode(req.body?.phone);
+      const r = await tg.sendCode(resolvedPhone);
       res.json({ ok: true, data: r });
     } catch (e) {
       logger.error(e);
@@ -38,14 +50,25 @@ export function startServer(accountManager: AccountManager) {
     res: Response,
   ) => {
     try {
-      const { code, phoneCodeHash, phone, session } = req.body;
+      const { code, phoneCodeHash, phone, session, apiId, apiHash } = req.body;
+      const resolvedPhone = phone ?? config.TELEGRAM_PHONE;
+      const resolvedApiId = apiId ?? config.TELEGRAM_API_ID;
+      const resolvedApiHash = apiHash ?? config.TELEGRAM_API_HASH;
+
+      if (!resolvedPhone) {
+        return res.status(400).json({ ok: false, error: 'phone is required' });
+      }
+      if (!resolvedApiId || !resolvedApiHash) {
+        return res.status(400).json({ ok: false, error: 'apiId and apiHash are required' });
+      }
+
       const tg = new TelegramService({
-        apiId: config.TELEGRAM_API_ID,
-        apiHash: config.TELEGRAM_API_HASH,
+        apiId: resolvedApiId,
+        apiHash: resolvedApiHash,
         sessionString: session,
       });
       await tg.connect();
-      const r = await tg.signIn({ code, phoneCodeHash, phone });
+      const r = await tg.signIn({ code, phoneCodeHash, phone: resolvedPhone });
 
       // If 2FA password is required
       if ((r as any)?.needPassword) {
@@ -53,10 +76,10 @@ export function startServer(accountManager: AccountManager) {
       }
 
       const account = await accountManager.addAccount({
-        phone: phone ?? config.TELEGRAM_PHONE,
+        phone: resolvedPhone,
         session: (r as any).session,
-        apiId: config.TELEGRAM_API_ID,
-        apiHash: config.TELEGRAM_API_HASH,
+        apiId: resolvedApiId,
+        apiHash: resolvedApiHash,
       });
 
       res.json({ ok: true, session: (r as any).session, me: (r as any).me, accountId: account.id });
@@ -71,20 +94,31 @@ export function startServer(accountManager: AccountManager) {
     res: Response,
   ) => {
     try {
-      const { password, session } = req.body;
+      const { password, session, phone, apiId, apiHash } = req.body;
+      const resolvedPhone = phone ?? config.TELEGRAM_PHONE;
+      const resolvedApiId = apiId ?? config.TELEGRAM_API_ID;
+      const resolvedApiHash = apiHash ?? config.TELEGRAM_API_HASH;
+
+      if (!resolvedPhone) {
+        return res.status(400).json({ ok: false, error: 'phone is required' });
+      }
+      if (!resolvedApiId || !resolvedApiHash) {
+        return res.status(400).json({ ok: false, error: 'apiId and apiHash are required' });
+      }
+
       const tg = new TelegramService({
-        apiId: config.TELEGRAM_API_ID,
-        apiHash: config.TELEGRAM_API_HASH,
+        apiId: resolvedApiId,
+        apiHash: resolvedApiHash,
         sessionString: session,
       });
       await tg.connect();
       const r = await tg.checkPassword(password);
 
       const account = await accountManager.addAccount({
-        phone: config.TELEGRAM_PHONE,
+        phone: resolvedPhone,
         session: r.session,
-        apiId: config.TELEGRAM_API_ID,
-        apiHash: config.TELEGRAM_API_HASH,
+        apiId: resolvedApiId,
+        apiHash: resolvedApiHash,
       });
 
       res.json({ ok: true, session: r.session, accountId: account.id });
