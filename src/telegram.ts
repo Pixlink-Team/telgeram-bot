@@ -19,8 +19,20 @@ export class TelegramService {
     this.apiHash = options?.apiHash ?? config.TELEGRAM_API_HASH;
     
     this.session = new StringSession(sessionString);
+    // Configure optional SOCKS proxy if enabled
+    const proxy = (config.TELEGRAM_PROXY_ENABLED && config.TELEGRAM_PROXY_HOST && config.TELEGRAM_PROXY_PORT)
+      ? {
+          ip: config.TELEGRAM_PROXY_HOST,
+          port: config.TELEGRAM_PROXY_PORT,
+          socksType: (config.TELEGRAM_PROXY_TYPE === 'socks4' ? 4 : 5) as 4 | 5,
+          username: config.TELEGRAM_PROXY_USERNAME,
+          password: config.TELEGRAM_PROXY_PASSWORD,
+        }
+      : undefined;
+
     this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
       connectionRetries: 5,
+      proxy,
     });
   }
 
