@@ -8,13 +8,19 @@ export const config = {
   TELEGRAM_API_ID: Number(process.env.TELEGRAM_API_ID ?? 0),
   TELEGRAM_API_HASH: process.env.TELEGRAM_API_HASH ?? '',
   TELEGRAM_PHONE: process.env.TELEGRAM_PHONE ?? '', // in E.164 format, e.g., +98912...
-  // Optional SOCKS proxy for restricted networks
+  // Optional proxy for restricted networks (SOCKS or MTProto)
   TELEGRAM_PROXY_ENABLED: (process.env.TELEGRAM_PROXY_ENABLED ?? '').toLowerCase() === 'true',
+  TELEGRAM_PROXY_MODE: (process.env.TELEGRAM_PROXY_MODE ?? 'socks').toLowerCase() as 'socks' | 'mtproto',
+  // SOCKS proxy settings
   TELEGRAM_PROXY_HOST: process.env.TELEGRAM_PROXY_HOST ?? '',
   TELEGRAM_PROXY_PORT: Number(process.env.TELEGRAM_PROXY_PORT ?? 0),
   TELEGRAM_PROXY_TYPE: (process.env.TELEGRAM_PROXY_TYPE ?? 'socks5').toLowerCase() as 'socks4' | 'socks5',
   TELEGRAM_PROXY_USERNAME: process.env.TELEGRAM_PROXY_USERNAME ?? undefined,
   TELEGRAM_PROXY_PASSWORD: process.env.TELEGRAM_PROXY_PASSWORD ?? undefined,
+  // MTProto proxy settings
+  TELEGRAM_MTPROTO_HOST: process.env.TELEGRAM_MTPROTO_HOST ?? '',
+  TELEGRAM_MTPROTO_PORT: Number(process.env.TELEGRAM_MTPROTO_PORT ?? 0),
+  TELEGRAM_MTPROTO_SECRET: process.env.TELEGRAM_MTPROTO_SECRET ?? '',
 };
 if (!config.TELEGRAM_API_ID || !config.TELEGRAM_API_HASH) {
   console.warn('[config] TELEGRAM_API_ID/TELEGRAM_API_HASH are not set. Set them in .env');

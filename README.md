@@ -13,15 +13,26 @@ A minimal project mirroring the WhatsApp bot API structure, but for Telegram USE
 3. Run in dev mode.
 
 ### Using a proxy (Iran / restricted networks)
-If your network blocks Telegram, enable a SOCKS proxy via environment variables:
+If your network blocks Telegram, you can use either **SOCKS** or **MTProto** proxy:
 
+#### Option 1: SOCKS proxy (v2ray, Clash, Outline, etc.)
 ```
 TELEGRAM_PROXY_ENABLED=true
+TELEGRAM_PROXY_MODE=socks
 TELEGRAM_PROXY_HOST=127.0.0.1
 TELEGRAM_PROXY_PORT=1080
-TELEGRAM_PROXY_TYPE=socks5 # or socks4
-TELEGRAM_PROXY_USERNAME=    # optional
-TELEGRAM_PROXY_PASSWORD=    # optional
+TELEGRAM_PROXY_TYPE=socks5      # or socks4
+TELEGRAM_PROXY_USERNAME=        # optional
+TELEGRAM_PROXY_PASSWORD=        # optional
+```
+
+#### Option 2: MTProto proxy (Telegram-specific)
+```
+TELEGRAM_PROXY_ENABLED=true
+TELEGRAM_PROXY_MODE=mtproto
+TELEGRAM_MTPROTO_HOST=example.com
+TELEGRAM_MTPROTO_PORT=443
+TELEGRAM_MTPROTO_SECRET=ee1234567890abcdef...  # hex secret from proxy
 ```
 
 These settings are picked up automatically by the MTProto client.

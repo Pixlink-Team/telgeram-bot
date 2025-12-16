@@ -19,16 +19,40 @@ export class TelegramService {
     this.apiHash = options?.apiHash ?? config.TELEGRAM_API_HASH;
     
     this.session = new StringSession(sessionString);
-    // Configure optional SOCKS proxy if enabled
-    const proxy = (config.TELEGRAM_PROXY_ENABLED && config.TELEGRAM_PROXY_HOST && config.TELEGRAM_PROXY_PORT)
-      ? {
-          ip: config.TELEGRAM_PROXY_HOST,
-          port: config.TELEGRAM_PROXY_PORT,
-          socksType: (config.TELEGRAM_PROXY_TYPE === 'socks4' ? 4 : 5) as 4 | 5,
-          username: config.TELEGRAM_PROXY_USERNAME,
-          password: config.TELEGRAM_PROXY_PASSWORD,
+    
+    // Configure optional proxy (SOCKS or MTProto) if enabled
+    let proxy: any = undefined;
+    
+    if (config.TELEGRAM_PROXY_ENABLED) {
+      if (config.TELEGRAM_PROXY_MODE === 'mtproto') {
+        // MTProto proxy (Telegram-specific)
+        if (config.TELEGRAM_MTPROTO_HOST && config.TELEGRAM_MTPROTO_PORT && config.TELEGRAM_MTPROTO_SECRET) {
+          proxy = {
+            ip: config.TELEGRAM_MTPROTO_HOST,
+            port: config.TELEGRAM_MTPROTO_PORT,
+            MTProto: true,
+            secret: config.TELEGRAM_MTPROTO_SECRET,
+          };
+          logger.info({ host: config.TELEGRAM_MTPROTO_HOST, port: config.TELEGRAM_MTPROTO_PORT }, 'Using MTProto proxy');
+        } else {
+          logger.warn('MTProto proxy enabled but missing host/port/secret');
         }
-      : undefined;
+      } else {
+        // SOCKS proxy (SOCKS4/5)
+        if (config.TELEGRAM_PROXY_HOST && config.TELEGRAM_PROXY_PORT) {
+          proxy = {
+            ip: config.TELEGRAM_PROXY_HOST,
+            port: config.TELEGRAM_PROXY_PORT,
+            socksType: (config.TELEGRAM_PROXY_TYPE === 'socks4' ? 4 : 5) as 4 | 5,
+            username: config.TELEGRAM_PROXY_USERNAME,
+            password: config.TELEGRAM_PROXY_PASSWORD,
+          };
+          logger.info({ host: config.TELEGRAM_PROXY_HOST, port: config.TELEGRAM_PROXY_PORT, type: config.TELEGRAM_PROXY_TYPE }, 'Using SOCKS proxy');
+        } else {
+          logger.warn('SOCKS proxy enabled but missing host/port');
+        }
+      }
+    }
 
     this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
       connectionRetries: 5,
