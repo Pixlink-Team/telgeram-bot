@@ -10,10 +10,16 @@ import { NewMessage } from 'telegram/events/index.js';
 export class TelegramService {
   private client: TelegramClient;
   private session: StringSession;
+  private apiId: number;
+  private apiHash: string;
 
-  constructor(sessionString?: string) {
-    this.session = new StringSession(sessionString ?? process.env.TELEGRAM_SESSION ?? '');
-    this.client = new TelegramClient(this.session, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH, {
+  constructor(options?: { sessionString?: string; apiId?: number; apiHash?: string }) {
+    const sessionString = options?.sessionString ?? process.env.TELEGRAM_SESSION ?? '';
+    this.apiId = options?.apiId ?? config.TELEGRAM_API_ID;
+    this.apiHash = options?.apiHash ?? config.TELEGRAM_API_HASH;
+    
+    this.session = new StringSession(sessionString);
+    this.client = new TelegramClient(this.session, this.apiId, this.apiHash, {
       connectionRetries: 5,
     });
   }
@@ -30,22 +36,34 @@ export class TelegramService {
   async sendCode(phone: string = config.TELEGRAM_PHONE) {
     const result = await this.client.invoke(new Api.auth.SendCode({
       phoneNumber: phone,
+      apiId: this.apiId,
+      apiHash: this.apiHash,
       settings: new Api.CodeSettings({})
     }));
+    const sessionStr = this.session.save();
     logger.info({ phone }, 'Sent login code');
-    return result; // contains phoneCodeHash
+    return { ...result, session: sessionStr }; // contains phoneCodeHash + temp session
   }
 
   async signIn(params: { phone?: string; code: string; phoneCodeHash: string }) {
     const phoneNumber = params.phone ?? config.TELEGRAM_PHONE;
-    const me = await this.client.invoke(new Api.auth.SignIn({
-      phoneNumber,
-      phoneCode: params.code,
-      phoneCodeHash: params.phoneCodeHash,
-    }));
-    // persist session
-    const sessionStr = this.session.save();
-    return { me, session: sessionStr };
+      try {
+        const me = await this.client.invoke(new Api.auth.SignIn({
+          phoneNumber,
+          phoneCode: params.code,
+          phoneCodeHash: params.phoneCodeHash,
+        }));
+        const sessionStr = this.session.save();
+        return { me, session: sessionStr };
+      } catch (e: any) {
+        // If two-factor password is required, surface a friendly flag with current session
+        if (e?.code === 401 && typeof e?.message === 'string' && e.message.includes('SESSION_PASSWORD_NEEDED')) {
+          const sessionStr = this.session.save();
+          logger.warn({ phone: phoneNumber }, 'Two-factor password required');
+          return { needPassword: true, session: sessionStr } as any;
+        }
+        throw e;
+      }
   }
 
   async checkPassword(password: string) {

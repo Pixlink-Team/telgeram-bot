@@ -16,8 +16,19 @@ export class AccountManager {
 
   async bootstrap() {
     const accounts = await AccountModel.find();
+    logger.info({ count: accounts.length }, 'Bootstrap: loading accounts');
     for (const account of accounts) {
-      await this.startAccount(account as AccountDocument);
+      logger.info({ phone: account.phone, apiId: account.apiId, hasApiHash: !!account.apiHash }, 'Bootstrap: checking account');
+      // Skip accounts with missing credentials (old records)
+      if (!account.apiId || !account.apiHash) {
+        logger.warn({ phone: account.phone, accountId: account.id }, 'Skipping account with missing credentials');
+        continue;
+      }
+      try {
+        await this.startAccount(account as AccountDocument);
+      } catch (err) {
+        logger.error({ phone: account.phone, accountId: account.id, err }, 'Failed to start account');
+      }
     }
   }
 
@@ -53,7 +64,11 @@ export class AccountManager {
   private async startAccount(account: AccountDocument) {
     if (this.clients.has(account.id)) return this.clients.get(account.id)!;
 
-    const tg = new TelegramService(account.session);
+    const tg = new TelegramService({
+      sessionString: account.session,
+      apiId: account.apiId,
+      apiHash: account.apiHash,
+    });
     await tg.connect();
     await tg.startListening(async (payload) => {
       await MessageModel.findOneAndUpdate(

@@ -6,22 +6,25 @@ import type { SendMessageOptions } from './types.js';
 import { AccountManager } from './accountManager.js';
 
 type SendCodeBody = { phone?: string };
-type VerifyCodeBody = { phone?: string; code: string; phoneCodeHash: string };
-type PasswordBody = { password: string };
+type VerifyCodeBody = { phone?: string; code: string; phoneCodeHash: string; session?: string };
+type PasswordBody = { password: string; session?: string };
 type SendMessageBody = { accountId: string; chatId: number; text: string; options?: SendMessageOptions };
 
 const app = express();
 app.use(express.json());
 
 export function startServer(accountManager: AccountManager) {
-  const tg = new TelegramService();
-
   // Health
   app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
 
   // Login endpoints for user account
   app.post('/login/sendCode', async (req: Request<unknown, unknown, SendCodeBody>, res: Response) => {
     try {
+      logger.info({ apiId: config.TELEGRAM_API_ID, apiHash: config.TELEGRAM_API_HASH }, 'Creating TelegramService for sendCode');
+      const tg = new TelegramService({
+        apiId: config.TELEGRAM_API_ID,
+        apiHash: config.TELEGRAM_API_HASH,
+      });
       await tg.connect();
       const r = await tg.sendCode(req.body?.phone);
       res.json({ ok: true, data: r });
@@ -30,23 +33,33 @@ export function startServer(accountManager: AccountManager) {
       res.status(500).json({ ok: false, error: String(e) });
     }
   });
-
   app.post('/login/verifyCode', async (
     req: Request<unknown, unknown, VerifyCodeBody>,
     res: Response,
   ) => {
     try {
-      const { code, phoneCodeHash, phone } = req.body;
+      const { code, phoneCodeHash, phone, session } = req.body;
+      const tg = new TelegramService({
+        apiId: config.TELEGRAM_API_ID,
+        apiHash: config.TELEGRAM_API_HASH,
+        sessionString: session,
+      });
+      await tg.connect();
       const r = await tg.signIn({ code, phoneCodeHash, phone });
+
+      // If 2FA password is required
+      if ((r as any)?.needPassword) {
+        return res.json({ ok: false, twoFactorRequired: true, session: (r as any).session });
+      }
 
       const account = await accountManager.addAccount({
         phone: phone ?? config.TELEGRAM_PHONE,
-        session: r.session,
+        session: (r as any).session,
         apiId: config.TELEGRAM_API_ID,
         apiHash: config.TELEGRAM_API_HASH,
       });
 
-      res.json({ ok: true, session: r.session, me: r.me, accountId: account.id });
+      res.json({ ok: true, session: (r as any).session, me: (r as any).me, accountId: account.id });
     } catch (e) {
       logger.error(e);
       res.status(500).json({ ok: false, error: String(e) });
@@ -58,7 +71,13 @@ export function startServer(accountManager: AccountManager) {
     res: Response,
   ) => {
     try {
-      const { password } = req.body;
+      const { password, session } = req.body;
+      const tg = new TelegramService({
+        apiId: config.TELEGRAM_API_ID,
+        apiHash: config.TELEGRAM_API_HASH,
+        sessionString: session,
+      });
+      await tg.connect();
       const r = await tg.checkPassword(password);
 
       const account = await accountManager.addAccount({
